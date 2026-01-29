@@ -38,30 +38,38 @@ async function allocateToken({ doctorId, slotId, patientName, source }) {
   }
 
   // CASE 2: Slot full → check for displacement
-  const lowestPriorityToken = activeTokens.reduce((low, curr) =>
-    curr.priority < low.priority ? curr : low
-  );
-
-  if (priority > lowestPriorityToken.priority) {
-    // Displace
-    lowestPriorityToken.status = "CANCELLED";
-    await lowestPriorityToken.save();
-
-    const newToken = await Token.create({
-      tokenId: uuidv4(),
-      patientName,
-      doctorId,
-      slotId,
-      source,
-      priority
-    });
-
-    return {
-      allocated: true,
-      displacedTokenId: lowestPriorityToken.tokenId,
-      token: newToken
-    };
+  
+activeTokens.sort((a, b) => {
+  if (a.priority !== b.priority) {
+    return a.priority - b.priority;
   }
+  return new Date(b.createdAt) - new Date(a.createdAt);
+});
+
+const lowestPriorityToken = activeTokens[0];
+
+if (priority > lowestPriorityToken.priority) {
+// NOTE: Displaced patients are currently marked as CANCELLED
+// Future improvement: add DISPLACED status + reallocation/waitlist
+  lowestPriorityToken.status = "CANCELLED";
+  await lowestPriorityToken.save();
+
+  const newToken = await Token.create({
+    tokenId: uuidv4(),
+    patientName,
+    doctorId,
+    slotId,
+    source,
+    priority
+  });
+
+  return {
+    allocated: true,
+    displacedTokenId: lowestPriorityToken.tokenId,
+    token: newToken
+  };
+}
+
 
   // CASE 3: Cannot allocate
   return { allocated: false, reason: "Slot full & lower priority" };

@@ -11,6 +11,10 @@ app.use("/doctors", doctorRoutes);
 const tokenRoutes = require("./routes/token.routes");
 app.use("/tokens", tokenRoutes);
 
+const simulationRoutes = require("./routes/simulation.routes");
+app.use("/simulate", simulationRoutes);
+
+
 app.get("/", (req, res) => {
   res.send("OPD Token Allocation Engine Running");
 });
